@@ -1,0 +1,1357 @@
+--// VÆLOR FONTS (client-side): stylish fonts for your Brookhaven RP name //--
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TextChatService = game:GetService("TextChatService")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local lp = Players.LocalPlayer
+
+-- Only runs in Brookhaven RP (the RP name remote only exists there)
+if game.PlaceId ~= 4924922222 then
+	pcall(function()
+		game:GetService("StarterGui"):SetCore("SendNotification", {
+			Title = "VÆLOR FONTS", Text = "This script only works in Brookhaven RP.", Duration = 6,
+		})
+	end)
+	return
+end
+
+local SAMPLE_TEXT = "Your Name" -- shown in the previews while the name box is empty
+
+----------------------------------------------------------------
+-- SETTINGS
+----------------------------------------------------------------
+local OWNER_NAME = "N0T_Z0RO100"   -- only this account sees the Inbox tab
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1573984184618192977/gSR9uQAVmYO8KTm0pqg7IMozzaveJzWOV7OGtJevhoE_0514jtIG58pqNOGuTfmNuYSO"              -- PASTE the owner's Discord webhook here (needed for reports to arrive when the owner is not in the same server)
+local ANNOUNCE_PUBLIC = true        -- true = "VÆLOR FONTS SCRIPT LOADED" goes to public chat, false = only you see it
+local REPORT_MAX = 150              -- max characters in a report
+local REPORT_COOLDOWN = 30          -- seconds between reports (anti-spam)
+local IS_OWNER = lp.Name:lower() == OWNER_NAME:lower()
+local DISCORD_LINK = "https://discord.gg/HHXF4QwTrq"  -- copied when the Discord button is tapped
+local DISCORD_NAME = "discord.gg/HHXF4QwTrq"          -- text shown on screen
+local DISCORD_ICON = "rbxassetid://100225738070413"
+
+----------------------------------------------------------------
+-- FONT STYLES
+-- Only characters that Roblox's fonts can draw are used (math-alphabet fonts show as boxes, so they are not included).
+----------------------------------------------------------------
+local function mapStyle(tbl, upperToo)
+	return function(ch)
+		return tbl[ch] or (upperToo and tbl[ch:lower()]) or ch
+	end
+end
+local function rangeStyle(U, L, D)
+	return function(ch)
+		local cp = utf8.codepoint(ch)
+		if cp >= 65 and cp <= 90 then return utf8.char(U + (cp - 65)) end
+		if cp >= 97 and cp <= 122 then return utf8.char(L + (cp - 97)) end
+		if D and cp >= 48 and cp <= 57 then return utf8.char(D + (cp - 48)) end
+		return ch
+	end
+end
+-- lower / upper are 26-item lists (a-z / A-Z). "" keeps the normal letter. No upper list = use the lower one for capitals too.
+local function fromLists(lower, upper, digits)
+	local t = {}
+	local lo = "abcdefghijklmnopqrstuvwxyz"
+	for i = 1, 26 do
+		local l = lower[i]
+		if l and l ~= "" then t[lo:sub(i, i)] = l end
+		local u = upper and upper[i]
+		if u and u ~= "" then t[lo:sub(i, i):upper()] = u end
+	end
+	if digits then
+		for i = 0, 9 do
+			if digits[i + 1] then t[tostring(i)] = digits[i + 1] end
+		end
+	end
+	return mapStyle(t, upper == nil)
+end
+
+local SMALLCAPS = fromLists(
+	{ "ᴀ", "ʙ", "ᴄ", "ᴅ", "ᴇ", "ꜰ", "ɢ", "ʜ", "ɪ", "ᴊ", "ᴋ", "ʟ", "ᴍ", "ɴ", "ᴏ", "ᴘ", "ǫ", "ʀ", "ꜱ", "ᴛ", "ᴜ", "ᴠ", "ᴡ", "x", "ʏ", "ᴢ" })
+local SUPER = fromLists(
+	{ "ᵃ", "ᵇ", "ᶜ", "ᵈ", "ᵉ", "ᶠ", "ᵍ", "ʰ", "ⁱ", "ʲ", "ᵏ", "ˡ", "ᵐ", "ⁿ", "ᵒ", "ᵖ", "q", "ʳ", "ˢ", "ᵗ", "ᵘ", "ᵛ", "ʷ", "ˣ", "ʸ", "ᶻ" },
+	{ "ᴬ", "ᴮ", "ᶜ", "ᴰ", "ᴱ", "ᶠ", "ᴳ", "ᴴ", "ᴵ", "ᴶ", "ᴷ", "ᴸ", "ᴹ", "ᴺ", "ᴼ", "ᴾ", "Q", "ᴿ", "ˢ", "ᵀ", "ᵁ", "ⱽ", "ᵂ", "ˣ", "ʸ", "ᶻ" },
+	{ "⁰", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹" })
+local FLIP = fromLists(
+	{ "ɐ", "q", "ɔ", "p", "ǝ", "ɟ", "ƃ", "ɥ", "ᴉ", "ɾ", "ʞ", "l", "ɯ", "u", "o", "d", "b", "ɹ", "s", "ʇ", "n", "ʌ", "ʍ", "x", "ʎ", "z" })
+local ACCENT = fromLists(
+	{ "ä", "ḅ", "ċ", "ď", "ë", "ḟ", "ġ", "ḧ", "ï", "ĵ", "ķ", "ļ", "ṁ", "ñ", "ö", "ṗ", "q", "ŕ", "ş", "ţ", "ü", "ṽ", "ẅ", "ẍ", "ÿ", "ż" },
+	{ "Ä", "Ḅ", "Ċ", "Ď", "Ë", "Ḟ", "Ġ", "Ḧ", "Ï", "Ĵ", "Ķ", "Ļ", "Ṁ", "Ñ", "Ö", "Ṗ", "Q", "Ŕ", "Ş", "Ţ", "Ü", "Ṽ", "Ẅ", "Ẍ", "Ÿ", "Ż" })
+local PAREN = fromLists(
+	{ "⒜", "⒝", "⒞", "⒟", "⒠", "⒡", "⒢", "⒣", "⒤", "⒥", "⒦", "⒧", "⒨", "⒩", "⒪", "⒫", "⒬", "⒭", "⒮", "⒯", "⒰", "⒱", "⒲", "⒳", "⒴", "⒵" })
+local GREEK = fromLists(
+	{ "α", "в", "¢", "∂", "є", "ƒ", "g", "н", "ι", "ʝ", "к", "ℓ", "м", "и", "σ", "ρ", "q", "я", "ѕ", "т", "υ", "ν", "ω", "x", "у", "z" },
+	{ "Α", "В", "С", "Δ", "Ε", "Ϝ", "G", "Н", "Ι", "Ј", "К", "L", "М", "Ν", "Ο", "Ρ", "Q", "Я", "Ѕ", "Т", "U", "Ѵ", "Ԝ", "Χ", "Υ", "Ζ" })
+local CYRILLIC = fromLists(
+	{ "а", "", "с", "", "е", "", "", "һ", "і", "ј", "к", "", "м", "", "о", "р", "", "", "ѕ", "т", "", "", "", "х", "у", "" },
+	{ "А", "В", "С", "", "Е", "", "", "Н", "І", "Ј", "К", "", "М", "", "О", "Р", "", "", "Ѕ", "Т", "", "", "", "Х", "У", "" })
+local HOOK = fromLists(
+	{ "ą", "ɓ", "ƈ", "ɗ", "ę", "ƒ", "ɠ", "ɦ", "į", "ʝ", "ƙ", "ƚ", "ɱ", "ŋ", "ǫ", "ƥ", "ʠ", "ɾ", "ʂ", "ƭ", "ų", "ʋ", "ɯ", "x", "ƴ", "ʐ" })
+local SLASH = fromLists(
+	{ "ⱥ", "ƀ", "ȼ", "đ", "ɇ", "", "ǥ", "ħ", "ɨ", "ɉ", "ҟ", "ł", "", "", "ø", "ᵽ", "ɋ", "ɍ", "", "ŧ", "ʉ", "", "", "", "ɏ", "ƶ" },
+	{ "Ⱥ", "Ƀ", "Ȼ", "Đ", "Ɇ", "", "Ǥ", "Ħ", "Ɨ", "Ɉ", "Ҟ", "Ł", "", "", "Ø", "Ᵽ", "Ɋ", "Ɍ", "", "Ŧ", "Ʉ", "", "", "", "Ɏ", "Ƶ" })
+local DOTTED = fromLists(
+	{ "ȧ", "ḃ", "ċ", "ḋ", "ė", "ḟ", "ġ", "ḣ", "", "", "", "", "ṁ", "ṅ", "ȯ", "ṗ", "", "ṙ", "ṡ", "ṫ", "", "", "ẇ", "ẋ", "ẏ", "ż" },
+	{ "Ȧ", "Ḃ", "Ċ", "Ḋ", "Ė", "Ḟ", "Ġ", "Ḣ", "İ", "", "", "", "Ṁ", "Ṅ", "Ȯ", "Ṗ", "", "Ṙ", "Ṡ", "Ṫ", "", "", "Ẇ", "Ẋ", "Ẏ", "Ż" })
+
+local CANADA = fromLists(
+	{ "ᗩ", "ᗷ", "ᑕ", "ᗪ", "E", "ᖴ", "G", "ᕼ", "I", "ᒍ", "K", "ᒪ", "ᗰ", "ᑎ", "O", "ᑭ", "ᑫ", "ᖇ", "ᔕ", "T", "ᑌ", "ᐯ", "ᗯ", "ᕽ", "Y", "ᘔ" })
+local CURRENCY = fromLists(
+	{ "₳", "฿", "₵", "Đ", "Ɇ", "₣", "₲", "Ħ", "ɨ", "J", "₭", "Ⱡ", "₥", "₦", "Ø", "₱", "Q", "Ɽ", "₴", "₮", "Ʉ", "V", "₩", "Ӿ", "Ɏ", "Ⱬ" })
+
+-- { name, function(char) -> styled char, extra }   extra: "reverse" (write backwards) or "spaced"
+-- combining-mark helper (skips spaces)
+local function comb(cp)
+	return function(ch)
+		if ch == " " then return ch end
+		return ch .. utf8.char(cp)
+	end
+end
+local TECH = fromLists(
+	{ "ǟ", "ɮ", "ƈ", "ɖ", "ɛ", "ʄ", "ɢ", "ɦ", "ɨ", "ʝ", "ӄ", "ʟ", "ʍ", "ռ", "օ", "ք", "զ", "ʀ", "ֆ", "ȶ", "ʊ", "ʋ", "ա", "Ӽ", "ʏ", "ʐ" })
+local function plain(ch) return ch end
+
+local STYLES = {
+	{ "Normal", function(ch) return ch end },
+	{ "Small Caps", SMALLCAPS },
+	{ "Wide", rangeStyle(0xFF21, 0xFF41, 0xFF10) },
+	{ "Bubble", function(ch)
+		local cp = utf8.codepoint(ch)
+		if cp >= 65 and cp <= 90 then return utf8.char(0x24B6 + (cp - 65)) end
+		if cp >= 97 and cp <= 122 then return utf8.char(0x24D0 + (cp - 97)) end
+		if cp == 48 then return utf8.char(0x24EA) end
+		if cp >= 49 and cp <= 57 then return utf8.char(0x2460 + (cp - 49)) end
+		return ch
+	end },
+	{ "Bracket", PAREN },
+	{ "Tiny", SUPER },
+	{ "Accents", ACCENT },
+	{ "Dotted", DOTTED },
+	{ "Slash", SLASH },
+	{ "Hook", HOOK },
+	{ "Greek", GREEK },
+	{ "Cyrillic", CYRILLIC },
+	{ "Canada", CANADA },
+	{ "Currency", CURRENCY },
+	{ "Underline", function(ch) return ch .. utf8.char(0x332) end },
+	{ "Strike", function(ch) return ch .. utf8.char(0x336) end },
+	{ "Spaced", function(ch) return ch end, "sep: " },
+	{ "Dot Sep", function(ch) return ch end, "sep:•" },
+	{ "Star Sep", function(ch) return ch end, "sep:★" },
+	{ "Heart Sep", function(ch) return ch end, "sep:♥" },
+	{ "Wave Sep", function(ch) return ch end, "sep:~" },
+	{ "Tech", TECH },
+	{ "UPPER", function(ch) return ch:upper() end },
+	{ "lower", function(ch) return ch:lower() end },
+	{ "aLt CaSe", plain, "alt" },
+	{ "Overline", comb(0x305) },
+	{ "Dbl Under", comb(0x333) },
+	{ "Dot Under", comb(0x323) },
+	{ "Tilde", comb(0x334) },
+	{ "Slashed", comb(0x338) },
+	{ "Dash Sep", plain, "sep:-" },
+	{ "Plus Sep", plain, "sep:+" },
+	{ "Slash Sep", plain, "sep:/" },
+	{ "Flower Sep", plain, "sep:✿" },
+	{ "Sparkle Sep", plain, "sep:✦" },
+	{ "Music Sep", plain, "sep:♪" },
+	{ "Diamond Sep", plain, "sep:◆" },
+	{ "Arrow Sep", plain, "sep:→" },
+	{ "Crown Frame", plain, "wrap:♛ | ♛" },
+	{ "Star Frame", plain, "wrap:★·.· | ·.·★" },
+	{ "Sparkle Frame", plain, "wrap:✦ | ✦" },
+	{ "Hearts Frame", plain, "wrap:♡ | ♡" },
+	{ "Moon Frame", plain, "wrap:☾ | ☽" },
+	{ "Flower Frame", plain, "wrap:❀ | ❀" },
+	{ "Music Frame", plain, "wrap:♪♫ | ♫♪" },
+	{ "Diamond Frame", plain, "wrap:◆◇ | ◇◆" },
+	{ "Cross Frame", plain, "wrap:✞ | ✞" },
+	{ "Line Frame", plain, "wrap:━━ | ━━" },
+	{ "Wave Frame", plain, "wrap:~•~ | ~•~" },
+	{ "Block Frame", plain, "wrap:▌| ▐" },
+	{ "Bracket Frame", plain, "wrap:【|】" },
+	{ "Corner Frame", plain, "wrap:『|』" },
+	{ "Quote Frame", plain, "wrap:❝ | ❞" },
+	{ "Angle Frame", plain, "wrap:« | »" },
+	{ "Bar Frame", plain, "wrap:║ | ║" },
+	{ "Dots Frame", plain, "wrap:•°• | •°•" },
+	{ "Upside Down", FLIP, "reverse" },
+}
+
+local function convert(text, style)
+	local fn, extra = style[2], style[3]
+	local ok, result = pcall(function()
+		local out = {}
+		for _, cp in utf8.codes(text) do
+			local ch = utf8.char(cp)
+			if extra == "alt" then ch = (#out % 2 == 0) and ch:lower() or ch:upper() end
+			table.insert(out, fn(ch))
+		end
+		if extra == "reverse" then
+			local rev = {}
+			for i = #out, 1, -1 do table.insert(rev, out[i]) end
+			out = rev
+		end
+		local sep = ""
+		if extra and extra:sub(1, 4) == "sep:" then sep = extra:sub(5) end
+		local joined = table.concat(out, sep)
+		if extra and extra:sub(1, 5) == "wrap:" then
+			local pre, post = extra:match("^wrap:(.-)|(.*)$")
+			joined = (pre or "") .. joined .. (post or "")
+		end
+		return joined
+	end)
+	return ok and result or text
+end
+
+----------------------------------------------------------------
+-- RP NAME REMOTE
+----------------------------------------------------------------
+local rpNameEvent, rpColorEvent
+task.spawn(function()
+	local RE = ReplicatedStorage:WaitForChild("RE", 10)
+	if not RE then return end
+	rpNameEvent = RE:WaitForChild("1RPNam1eTex1t", 10)
+	rpColorEvent = RE:WaitForChild("1RPNam1eColo1r", 10)
+end)
+
+----------------------------------------------------------------
+-- SYMBOLS (only common BMP symbols that Roblox fonts can draw)
+----------------------------------------------------------------
+local SYMBOLS = {
+	"★","☆","♥","♡","♦","♢","♣","♧","♠","♤","♔","♕","♖","♗","♘","♙",
+	"♚","♛","♜","♝","♞","♪","♫","♬","♩","♭","♮","♯","☼","☾","☽","❀",
+	"✿","✓","✗","✘","✞","✟","➤","➜","➔","➢","←","↑","→","↓","↖","↗",
+	"↘","↙","↺","↻","⇒","⇔","∞","≈","≠","≥","≤","±","×","÷","√","∑",
+	"∆","∇","∫","∂","∴","∵","°","‰","¶","§","©","®","¤","¥","£","€",
+	"¢","†","‡","•","‣","◆","◇","◈","◉","◎","●","○","◐","◑","◒","◓",
+	"■","□","▪","▫","▲","△","▼","▽","►","◄","▶","◀","░","▒","▓","█",
+	"▌","▐","▀","▄","▬","┃","━","═","║","╬","╔","╗","╚","╝","┈","┊",
+	"⋆","⋄","⌘","⌥","«","»","‹","›","『","』","【","】","〖","〗","〔","〕",
+	"「","」","〈","〉","❝","❞","❮","❯","❥","❦","❧","☙","☚","☛","☜","☞",
+	"✦","✧","✩","✪","✫","✬","✭","✮","✯","✰","✱","✲","✳","✴","✵","✶",
+	"✷","✸","✹","✺","✻","✼","✽","✾","❁","❂","❃","❋","❖","⁂","※","⁎",
+	"⁕","⁜","♰","♱","☩","☨","☥","☦","☧","✠","☬","☫","⚚","ღ","ツ","シ",
+	"ッ","ʚ","ɞ","ᵔ","ᴥ","ᴗ","ᵕ","ᴖ","ᓚ","ᘏ","ᓛ","ᴗ","༺","༻","༒","꧁",
+	"꧂","∀","∃","∅","∈","∉","⊕","⊗","⊙","⊚","⊛","⋈","⊰","⊱","⋰","⋱",
+	"┌","┐","└","┘","├","┤","┬","┴","┼","╭","╮","╯","╰","╱","╲","╳",
+	"▁","▂","▃","▅","▆","▇","▏","▎","▍","◢","◣","◤","◥","◬","◭","◮",
+	"◯","◌","◍","☗","☖","⋙","⋘","≫","≪","⌈","⌉","⌊","⌋","⎛","⎞","⎝",
+	"⎠","⟨","⟩","⟪","⟫","⦅","⦆","﹏","﹌","︵","︶","︹","︺","︽","︾","〰",
+}
+
+-- Emoji commonly used in fancy names
+local EMOJI = {
+	-- sparkle / shine
+	"✨","💫","⭐","🌟","💥","🔥","⚡","❄️","💎","👑","🌈","☀️","🌙","🌠","☄️","🪐","🌊","💧","🔱","🔮",
+	-- hearts
+	"❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","♥️",
+	-- flowers / nature
+	"🌸","🌹","🥀","🌺","🌻","🌼","🌷","💐","🍀","🌿","🍃","🍁","🦋","🐝","🕊️","🌵","🌴","🍄","🌾","🪷",
+	-- animals
+	"🐺","🦊","🐱","🐶","🐼","🐯","🦁","🐲","🐉","🦄","🐍","🦅","🦇","🕷️","🐰","🐻","🐧","🦈","🐬","🐸",
+	-- faces / vibes
+	"😈","👿","💀","☠️","👻","🤡","👽","👾","🤖","😎","🥶","🥵","😏","😍","🥰","😘","😜","🤪","😇","🥺",
+	"😭","😂","🤣","😤","😡","🤬","🤫","🤑","😴","🤩","🥳","😋","🙄","🤭","😌","😳",
+	-- hands
+	"👍","👎","👊","✊","✌️","🤞","🤟","🤘","👌","👋","🙏","💪","👏","🙌","☝️","👀",
+	-- fun / objects
+	"🎀","🎉","🎊","🎁","🎶","🎵","🎧","🎤","🎮","🕹️","🎯","🎲","🎭","🎨","⚽","🏀","🏆","🥇","🏅","💣",
+	"🗡️","⚔️","🛡️","🏹","💰","💸","💵","💍","👒","🎩","🧢","🕶️","💄","🔑","🔔","📷","💡","🚀","✈️","🚗",
+	-- marks / shapes
+	"✅","❌","❎","💯","🆒","🆕","🔝","‼️","❗","❓","⚠️","🚫","⭕","🔴","🟠","🟡","🟢","🔵","🟣","⚫",
+	"⚪","🟤","🔺","🔻","🔷","🔶","💠","🔰","♻️","➕","➖","✔️","☑️","➡️","⬅️","⬆️","⬇️","☮️","☯️","♾️",
+}
+
+----------------------------------------------------------------
+-- GUI
+----------------------------------------------------------------
+local C = {
+	bg = Color3.fromRGB(10, 10, 15), bg2 = Color3.fromRGB(20, 12, 28), panel = Color3.fromRGB(18, 18, 26), field = Color3.fromRGB(28, 28, 40),
+	text = Color3.fromRGB(240, 240, 248), sub = Color3.fromRGB(150, 150, 172), red = Color3.fromRGB(255, 70, 90),
+	good = Color3.fromRGB(200, 30, 60), accent = Color3.fromRGB(90, 24, 52), line = Color3.fromRGB(60, 60, 82),
+}
+local bgAlpha = 0   -- inner panel transparency (changed by the theme buttons)
+local locked = false
+local function new(class, props, parent)
+	local o = Instance.new(class)
+	for k, v in pairs(props) do o[k] = v end
+	if parent then o.Parent = parent end
+	return o
+end
+local function round(o, r) new("UICorner", { CornerRadius = UDim.new(0, r or 8) }, o) end
+local function thin(o) return new("UIStroke", { Color = C.line, Thickness = 1, Transparency = 0.2 }, o) end
+
+local gui = new("ScreenGui", { Name = "VÆLOR FONTS", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling }, lp:WaitForChild("PlayerGui"))
+
+local spinners = {}
+local function rgbStroke(parent, thickness)
+	local s = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = thickness or 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, parent)
+	local g = new("UIGradient", { Color = ColorSequence.new(Color3.new(1, 0, 0)) }, s)
+	table.insert(spinners, g)
+	return s
+end
+
+local W, H = 660, 380
+local main = new("Frame", {
+	Size = UDim2.fromOffset(W, H), Position = UDim2.new(0.5, -W / 2, 0.5, -H / 2), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0,
+}, gui)
+round(main, 14)
+new("UIGradient", { Rotation = 90, Color = ColorSequence.new(C.bg2, C.bg) }, main)
+rgbStroke(main, 2)
+
+local bar = new("Frame", { Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1 }, main)
+local title = new("TextLabel", {
+	Text = "Vælor Fonts", Font = Enum.Font.GothamBold, TextSize = 20, TextColor3 = C.red, BackgroundTransparency = 1,
+	Position = UDim2.fromOffset(18, 0), Size = UDim2.fromOffset(300, 42), TextXAlignment = Enum.TextXAlignment.Left,
+}, bar)
+new("Frame", { Size = UDim2.new(1, -36, 0, 1), Position = UDim2.fromOffset(18, 42), BackgroundColor3 = C.line, BorderSizePixel = 0 }, main)
+
+local body = new("Frame", { Size = UDim2.new(1, 0, 1, -48), Position = UDim2.fromOffset(0, 48), BackgroundTransparency = 1 }, main)
+local LW = 252
+local RX = 290
+local RW = W - RX - 18
+
+local function label(text, x, y, w)
+	return new("TextLabel", {
+		Text = text, Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = C.sub, BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, 14), TextXAlignment = Enum.TextXAlignment.Left,
+	}, body)
+end
+
+-- left column
+label("YOUR NAME", 18, 4, LW)
+local nameBox = new("TextBox", {
+	Text = "", PlaceholderText = "Type your name", Font = Enum.Font.Gotham, TextSize = 16, TextColor3 = C.text,
+	PlaceholderColor3 = C.sub, BackgroundColor3 = C.field, ClearTextOnFocus = false, Position = UDim2.fromOffset(18, 21),
+	Size = UDim2.fromOffset(LW, 36), TextXAlignment = Enum.TextXAlignment.Left,
+}, body)
+round(nameBox, 10)
+new("UIPadding", { PaddingLeft = UDim.new(0, 12) }, nameBox)
+thin(nameBox)
+
+label("PREVIEW", 18, 64, LW)
+local preview = new("TextBox", {
+	Text = "", PlaceholderText = "Pick a font or type here", PlaceholderColor3 = C.sub, ClearTextOnFocus = false, Font = Enum.Font.Gotham, TextSize = 19, TextColor3 = C.text, BackgroundColor3 = C.panel,
+	Position = UDim2.fromOffset(18, 81), Size = UDim2.fromOffset(LW, 48), TextWrapped = true,
+}, body)
+round(preview, 10)
+new("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }, preview)
+rgbStroke(preview, 1.5)
+
+label("SYMBOL POSITION", 18, 138, LW)
+local sideBtns = {}
+local SIDES = { "Left", "Right", "Both" }
+for k, name in ipairs(SIDES) do
+	local b = new("TextButton", {
+		Text = name, Font = Enum.Font.GothamBold, TextSize = 13, TextColor3 = C.text, BackgroundColor3 = C.field,
+		Position = UDim2.fromOffset(18 + (k - 1) * 87, 155), Size = UDim2.fromOffset(78, 28), AutoButtonColor = false,
+	}, body)
+	round(b, 8)
+	thin(b)
+	sideBtns[name] = b
+end
+
+local confirmBtn = new("TextButton", {
+	Text = "Confirm", Font = Enum.Font.GothamBold, TextSize = 19, TextColor3 = C.text, BackgroundColor3 = C.good,
+	Position = UDim2.fromOffset(18, 194), Size = UDim2.fromOffset(152, 42),
+}, body)
+round(confirmBtn, 10)
+rgbStroke(confirmBtn, 2.5)
+
+local rainbowBtn = new("TextButton", {
+	Text = "Rainbow", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = C.text, BackgroundColor3 = C.field,
+	Position = UDim2.fromOffset(176, 194), Size = UDim2.fromOffset(94, 42), AutoButtonColor = false,
+}, body)
+round(rainbowBtn, 10)
+thin(rainbowBtn)
+
+local status = new("TextLabel", {
+	Text = "Type a name, pick a font / symbol, then tap Confirm.", Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = C.sub,
+	BackgroundTransparency = 1, Position = UDim2.fromOffset(18, 242), Size = UDim2.fromOffset(LW, 30), TextWrapped = true,
+	TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
+}, body)
+local creditPill = new("Frame", {
+	Position = UDim2.fromOffset(18, 274), Size = UDim2.fromOffset(LW, 22), BackgroundColor3 = C.panel,
+}, body)
+round(creditPill, 11)
+rgbStroke(creditPill, 1.5)
+local credit = new("TextLabel", {
+	Text = "made by Zoro aka Nashedi", Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = C.text, BackgroundTransparency = 1,
+	Size = UDim2.fromScale(1, 1),
+}, creditPill)
+local discordPill = new("TextButton", {
+	Text = "", AutoButtonColor = false, Position = UDim2.fromOffset(18, 300), Size = UDim2.fromOffset(LW, 22), BackgroundColor3 = C.panel,
+}, body)
+round(discordPill, 11)
+thin(discordPill)
+new("TextLabel", {
+	Text = (DISCORD_ICON == "" and "💬  " or "") .. "Discord: " .. DISCORD_NAME, Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = C.text,
+	BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1),
+}, discordPill)
+if DISCORD_ICON ~= "" then
+	new("ImageLabel", { Image = DISCORD_ICON, BackgroundTransparency = 1, Position = UDim2.fromOffset(8, 3), Size = UDim2.fromOffset(16, 16) }, discordPill)
+end
+discordPill.MouseButton1Click:Connect(function()
+	local ok = pcall(function() setclipboard(DISCORD_LINK) end)
+	status.Text = ok and ("Discord link copied: " .. DISCORD_LINK) or ("Discord: " .. DISCORD_LINK)
+end)
+
+-- right column: tabs + content
+local tabBtns = {}
+local TAB_NAMES = { "Fonts", "Symbols", "Emoji", "Report" }
+if IS_OWNER then table.insert(TAB_NAMES, "Inbox") end
+local TAB_GAP = 4
+local TAB_W = math.floor((RW - TAB_GAP * (#TAB_NAMES - 1)) / #TAB_NAMES)
+local function tabButton(text, x)
+	local b = new("TextButton", {
+		Text = text, Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = C.text, BackgroundColor3 = C.field,
+		Position = UDim2.fromOffset(RX + x, 2), Size = UDim2.fromOffset(TAB_W, 30), AutoButtonColor = false,
+	}, body)
+	round(b, 15)
+	tabBtns[text] = b
+	return b
+end
+for i, name in ipairs(TAB_NAMES) do
+	tabButton(name, (i - 1) * (TAB_W + TAB_GAP))
+end
+
+local function scroller()
+	local f = new("ScrollingFrame", {
+		Position = UDim2.fromOffset(RX, 40), Size = UDim2.new(0, RW, 1, -50), BackgroundColor3 = C.panel, BorderSizePixel = 0,
+		ScrollBarThickness = 3, ScrollBarImageColor3 = C.red, CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	}, body)
+	round(f, 10)
+	thin(f)
+	return f
+end
+local fontList = scroller()
+new("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, fontList)
+new("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 8) }, fontList)
+
+local symList = scroller()
+symList.Visible = false
+symList.Position = UDim2.fromOffset(RX, 108)
+symList.Size = UDim2.new(0, RW, 1, -118)
+
+local symBar = new("Frame", { Position = UDim2.fromOffset(RX, 40), Size = UDim2.fromOffset(RW, 62), BackgroundColor3 = C.panel, Visible = false }, body)
+round(symBar, 10)
+thin(symBar)
+local symLabel = new("TextLabel", {
+	Text = "", Font = Enum.Font.Gotham, TextSize = 18, TextColor3 = C.text, BackgroundTransparency = 1,
+	Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -118, 0, 32), TextXAlignment = Enum.TextXAlignment.Left,
+	TextTruncate = Enum.TextTruncate.AtEnd,
+}, symBar)
+local function smallBtn(text, x, w)
+	local b = new("TextButton", {
+		Text = text, Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = C.text, BackgroundColor3 = C.field,
+		Position = UDim2.new(1, x, 0, 4), Size = UDim2.fromOffset(w, 24), AutoButtonColor = false,
+	}, symBar)
+	round(b, 8)
+	return b
+end
+local undoBtn = smallBtn("Undo", -106, 48)
+local clearBtn = smallBtn("Clear", -54, 48)
+new("UIGridLayout", { CellSize = UDim2.fromOffset(40, 40), CellPadding = UDim2.fromOffset(6, 6), SortOrder = Enum.SortOrder.LayoutOrder }, symList)
+new("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8) }, symList)
+
+-- keyboard typing row (inside the symbol bar)
+local typeBox = new("TextBox", {
+	Text = "", PlaceholderText = "Type or paste your own symbols here...", PlaceholderColor3 = C.sub, ClearTextOnFocus = false,
+	Font = Enum.Font.Gotham, TextSize = 14, TextColor3 = C.text, BackgroundColor3 = C.field, TextXAlignment = Enum.TextXAlignment.Left,
+	ClipsDescendants = true, Position = UDim2.fromOffset(8, 34), Size = UDim2.new(1, -84, 0, 22),
+}, symBar)
+round(typeBox, 6)
+new("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }, typeBox)
+local typeAdd = new("TextButton", {
+	Text = "Add", Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = C.text, BackgroundColor3 = C.good,
+	Position = UDim2.new(1, -68, 0, 34), Size = UDim2.fromOffset(60, 22), AutoButtonColor = false,
+}, symBar)
+round(typeAdd, 6)
+
+-- emoji grid
+local emojiList = scroller()
+emojiList.Visible = false
+emojiList.Position = UDim2.fromOffset(RX, 108)
+emojiList.Size = UDim2.new(0, RW, 1, -118)
+new("UIGridLayout", { CellSize = UDim2.fromOffset(40, 40), CellPadding = UDim2.fromOffset(6, 6), SortOrder = Enum.SortOrder.LayoutOrder }, emojiList)
+new("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8) }, emojiList)
+
+-- report ("mistakes") panel
+local reportFrame = new("Frame", { Position = UDim2.fromOffset(RX, 40), Size = UDim2.new(0, RW, 1, -50), BackgroundColor3 = C.panel, Visible = false }, body)
+round(reportFrame, 10)
+thin(reportFrame)
+new("TextLabel", {
+	Text = "FOUND A MISTAKE OR BUG? TELL THE OWNER", Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = C.sub, BackgroundTransparency = 1,
+	Position = UDim2.fromOffset(12, 8), Size = UDim2.new(1, -24, 0, 14), TextXAlignment = Enum.TextXAlignment.Left,
+}, reportFrame)
+local reportBox = new("TextBox", {
+	Text = "", PlaceholderText = "Write the mistake / bug / idea here...", PlaceholderColor3 = C.sub, MultiLine = true, TextWrapped = true,
+	ClearTextOnFocus = false, Font = Enum.Font.Gotham, TextSize = 14, TextColor3 = C.text, BackgroundColor3 = C.field,
+	TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
+	Position = UDim2.fromOffset(10, 28), Size = UDim2.new(1, -20, 0, 108),
+}, reportFrame)
+round(reportBox, 8)
+new("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6) }, reportBox)
+thin(reportBox)
+local reportCount = new("TextLabel", {
+	Text = "0/" .. REPORT_MAX, Font = Enum.Font.Gotham, TextSize = 11, TextColor3 = C.sub, BackgroundTransparency = 1,
+	Position = UDim2.new(1, -90, 0, 140), Size = UDim2.fromOffset(80, 14), TextXAlignment = Enum.TextXAlignment.Right,
+}, reportFrame)
+local reportSend = new("TextButton", {
+	Text = "Send to owner", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = C.text, BackgroundColor3 = C.good,
+	Position = UDim2.fromOffset(10, 162), Size = UDim2.fromOffset(130, 34), AutoButtonColor = false,
+}, reportFrame)
+round(reportSend, 8)
+local reportStatus = new("TextLabel", {
+	Text = (WEBHOOK_URL == "" and not IS_OWNER) and "Owner has no webhook set yet: reports only arrive if the owner is in your server." or "Your username + message are sent to the owner only.", Font = Enum.Font.Gotham, TextSize = 11, TextColor3 = C.sub,
+	BackgroundTransparency = 1, Position = UDim2.fromOffset(150, 160), Size = UDim2.new(1, -160, 0, 40), TextWrapped = true,
+	TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
+}, reportFrame)
+
+-- owner-only inbox
+local inboxList, inboxEmpty
+if IS_OWNER then
+	inboxList = scroller()
+	inboxList.Visible = false
+	new("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, inboxList)
+	new("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 8) }, inboxList)
+	inboxEmpty = new("TextLabel", {
+		Text = "No reports yet.", Font = Enum.Font.Gotham, TextSize = 13, TextColor3 = C.sub, BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 24), LayoutOrder = -1,
+	}, inboxList)
+end
+
+----------------------------------------------------------------
+-- LOGIC
+----------------------------------------------------------------
+local selected = nil     -- font index
+local symbols = {}      -- symbols picked one by one
+local side = nil   -- no position selected until the player picks one
+local symButtons = {}
+
+local function currentText()
+	return nameBox.Text:match("%S") and nameBox.Text or nil
+end
+
+local function build(text)
+	local s = convert(text, STYLES[selected or 1])
+	local sym = table.concat(symbols)
+	if sym ~= "" then
+		local sd = side or "Left"
+		if sd == "Left" then s = sym .. " " .. s
+		elseif sd == "Right" then s = s .. " " .. sym
+		elseif sd == "Both" then s = sym .. " " .. s .. " " .. sym end
+	end
+	return s
+end
+
+local customText = nil   -- set when the person types straight into the preview box
+local updating = false
+local function updatePreview()
+	updating = true
+	customText = nil
+	if selected or #symbols > 0 then
+		preview.Text = build(currentText() or SAMPLE_TEXT)
+	else
+		preview.Text = ""
+	end
+	updating = false
+end
+preview:GetPropertyChangedSignal("Text"):Connect(function()
+	if updating then return end
+	customText = preview.Text:match("%S") and preview.Text or nil
+end)
+
+local function refreshSides()
+	for name, b in pairs(sideBtns) do
+		b.BackgroundColor3 = (name == side) and C.accent or C.field
+	end
+end
+for name, b in pairs(sideBtns) do
+	b.MouseButton1Click:Connect(function()
+		if side == name then side = nil else side = name end
+		refreshSides()
+		updatePreview()
+	end)
+end
+refreshSides()
+
+local MAX_SYMBOLS = 12
+local function updateSymBar()
+	local t = table.concat(symbols)
+	symLabel.Text = t == "" and "tap symbols one by one" or t
+	symLabel.TextColor3 = t == "" and C.sub or C.text
+end
+undoBtn.MouseButton1Click:Connect(function()
+	table.remove(symbols)
+	updateSymBar()
+	updatePreview()
+end)
+clearBtn.MouseButton1Click:Connect(function()
+	symbols = {}
+	updateSymBar()
+	updatePreview()
+end)
+
+for i, ch in ipairs(SYMBOLS) do
+	local b = new("TextButton", {
+		Text = ch, Font = Enum.Font.Gotham, TextSize = 20, TextColor3 = C.text, BackgroundColor3 = C.field,
+		LayoutOrder = i, AutoButtonColor = false,
+	}, symList)
+	round(b, 8)
+	symButtons[ch] = b
+	b.MouseButton1Click:Connect(function()
+		if #symbols >= MAX_SYMBOLS then
+			status.Text = "Max " .. MAX_SYMBOLS .. " symbols. Use Undo or Clear."
+			return
+		end
+		table.insert(symbols, ch)
+		status.Text = "Added " .. ch .. (side and ". Tap more, or Undo / Clear." or ". Placed on the left. Tap Left / Right / Both to change.")
+		updateSymBar()
+		updatePreview()
+	end)
+end
+
+for i, ch in ipairs(EMOJI) do
+	local b = new("TextButton", {
+		Text = ch, Font = Enum.Font.Gotham, TextSize = 22, TextColor3 = C.text, BackgroundColor3 = C.field,
+		LayoutOrder = i, AutoButtonColor = false,
+	}, emojiList)
+	round(b, 8)
+	b.MouseButton1Click:Connect(function()
+		if #symbols >= MAX_SYMBOLS then
+			status.Text = "Max " .. MAX_SYMBOLS .. " symbols/emoji. Use Undo or Clear."
+			return
+		end
+		table.insert(symbols, ch)
+		status.Text = "Added " .. ch .. (side and ". Tap more, or Undo / Clear." or ". Placed on the left. Tap Left / Right / Both to change.")
+		updateSymBar()
+		updatePreview()
+	end)
+end
+
+-- keyboard typing: every typed / pasted symbol is added just like a tapped one
+local function isMod(cp)
+	return cp == 0xFE0F or cp == 0xFE0E or cp == 0x200D or cp == 0x20E3 or (cp >= 0x1F3FB and cp <= 0x1F3FF)
+		or (cp >= 0x0300 and cp <= 0x036F) or (cp >= 0xE0020 and cp <= 0xE007F)
+end
+local function splitSymbols(str)
+	local out, joiner = {}, false
+	for _, cp in utf8.codes(str) do
+		local ch = utf8.char(cp)
+		if cp == 32 or cp == 9 or cp == 10 or cp == 13 then
+			joiner = false
+		elseif #out > 0 and (joiner or isMod(cp)) then
+			out[#out] = out[#out] .. ch
+			joiner = (cp == 0x200D)
+		else
+			table.insert(out, ch)
+			joiner = false
+		end
+	end
+	return out
+end
+local function addTyped()
+	local txt = typeBox.Text
+	if not txt:match("%S") then return end
+	local ok, list = pcall(splitSymbols, txt)
+	if not ok then
+		status.Text = "Could not read that text."
+		return
+	end
+	local added = 0
+	for _, g in ipairs(list) do
+		if #symbols >= MAX_SYMBOLS then break end
+		table.insert(symbols, g)
+		added += 1
+	end
+	typeBox.Text = ""
+	if added < #list then
+		status.Text = "Max " .. MAX_SYMBOLS .. " symbols. Added " .. added .. ", use Undo or Clear."
+	elseif side then
+		status.Text = "Added " .. added .. " typed symbol(s)."
+	else
+		status.Text = "Added " .. added .. " typed symbol(s). Placed on the left. Tap Left / Right / Both to change."
+	end
+	updateSymBar()
+	updatePreview()
+end
+typeAdd.MouseButton1Click:Connect(addTyped)
+typeBox.FocusLost:Connect(function(enter)
+	if enter then addTyped() end
+end)
+
+----------------------------------------------------------------
+-- REPORTS (mistakes / bugs) -> owner
+----------------------------------------------------------------
+local requestFn = (syn and syn.request) or (http and http.request) or http_request or request or (fluxus and fluxus.request)
+
+local function deliverReport(text)
+	local payload = "[KF] " .. lp.Name .. ": " .. text
+	local reasons = {}
+
+	-- 1) Discord webhook (works even if the owner is in another server)
+	if WEBHOOK_URL == "" then
+		table.insert(reasons, "owner has not set a webhook yet")
+	elseif not requestFn then
+		table.insert(reasons, "your executor has no request function")
+	else
+		local ok, res = pcall(function()
+			return requestFn({
+				Url = WEBHOOK_URL, Method = "POST", Headers = { ["Content-Type"] = "application/json" },
+				Body = HttpService:JSONEncode({ username = "VÆLOR Fonts Reports", content = payload:sub(1, 1900), allowed_mentions = { parse = {} } }),
+			})
+		end)
+		local code = ok and type(res) == "table" and res.StatusCode or nil
+		if ok and type(res) == "table" and (res.Success == true or (code and code >= 200 and code < 300)) then
+			return true
+		end
+		table.insert(reasons, "webhook error " .. tostring(code or (ok and "no reply") or "request blocked"))
+	end
+
+	-- 2) private whisper to the owner if they are in this server
+	local ownerHere = false
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= lp and p.Name:lower() == OWNER_NAME:lower() then
+			ownerHere = true
+			local cmd = "/w " .. p.Name .. " " .. payload
+			local ok = pcall(function()
+				if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+					TextChatService.TextChannels.RBXGeneral:SendAsync(cmd)
+				else
+					ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(cmd, "All")
+				end
+			end)
+			if ok then return true end
+		end
+	end
+	if not ownerHere then table.insert(reasons, "owner is not in this server") end
+	return false, table.concat(reasons, ", ")
+end
+
+reportBox:GetPropertyChangedSignal("Text"):Connect(function()
+	if #reportBox.Text > REPORT_MAX then
+		reportBox.Text = reportBox.Text:sub(1, REPORT_MAX)
+	end
+	reportCount.Text = #reportBox.Text .. "/" .. REPORT_MAX
+end)
+
+local lastReport = -math.huge
+reportSend.MouseButton1Click:Connect(function()
+	local text = reportBox.Text:gsub("[\r\n]+", " ")
+	if not text:match("%S") then
+		reportStatus.Text = "Write something first."
+		return
+	end
+	local wait_ = REPORT_COOLDOWN - (os.clock() - lastReport)
+	if wait_ > 0 then
+		reportStatus.Text = "Please wait " .. math.ceil(wait_) .. "s before sending another."
+		return
+	end
+	lastReport = os.clock()
+	reportStatus.Text = "Sending..."
+	local ok, why = deliverReport(text)
+	if ok then
+		reportBox.Text = ""
+		reportStatus.Text = "Sent to the owner. Thank you!"
+	else
+		reportStatus.Text = "Not sent: " .. tostring(why) .. "."
+		lastReport = -math.huge
+	end
+end)
+
+-- owner: collect incoming reports into the Inbox tab
+local inboxCount = 0
+if IS_OWNER then
+	pcall(function()
+		TextChatService.MessageReceived:Connect(function(m)
+			local t = m.Text or ""
+			if t:sub(1, 5) ~= "[KF] " then return end
+			if m.TextSource and m.TextSource.UserId == lp.UserId then return end
+			inboxCount += 1
+			inboxEmpty.Visible = false
+			tabBtns["Inbox"].Text = "Inbox (" .. inboxCount .. ")"
+			local row = new("TextLabel", {
+				Text = os.date("%H:%M") .. "  " .. t:sub(6), Font = Enum.Font.Gotham, TextSize = 13, TextColor3 = C.text,
+				BackgroundColor3 = C.field, BackgroundTransparency = bgAlpha, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+				TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
+				LayoutOrder = inboxCount,
+			}, inboxList)
+			round(row, 8)
+			new("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8) }, row)
+		end)
+	end)
+end
+
+local function rebuild()
+	for _, c in ipairs(fontList:GetChildren()) do
+		if c:IsA("GuiObject") then c:Destroy() end
+	end
+	local text = currentText() or SAMPLE_TEXT
+	for i, st in ipairs(STYLES) do
+		local b = new("TextButton", {
+			Text = convert(text, st), Font = Enum.Font.Gotham, TextSize = 18, TextColor3 = C.text,
+			BackgroundColor3 = selected == i and C.accent or C.field, BackgroundTransparency = bgAlpha, Size = UDim2.new(1, 0, 0, 40),
+			TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, LayoutOrder = i, AutoButtonColor = false,
+		}, fontList)
+		round(b, 8)
+		new("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 92) }, b)
+		new("TextLabel", {
+			Text = st[1], Font = Enum.Font.GothamMedium, TextSize = 11, TextColor3 = C.sub, BackgroundTransparency = 1,
+			AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 84, 0.5, 0), Size = UDim2.fromOffset(80, 16),
+			TextXAlignment = Enum.TextXAlignment.Right,
+		}, b)
+		b.MouseButton1Click:Connect(function()
+			selected = i
+			status.Text = "Font: " .. st[1] .. ". Tap Confirm to apply."
+			updatePreview()
+			rebuild()
+		end)
+	end
+end
+
+local function showTab(name)
+	fontList.Visible = (name == "Fonts")
+	symList.Visible = (name == "Symbols")
+	emojiList.Visible = (name == "Emoji")
+	reportFrame.Visible = (name == "Report")
+	if inboxList then inboxList.Visible = (name == "Inbox") end
+	symBar.Visible = (name == "Symbols" or name == "Emoji")
+	for n, b in pairs(tabBtns) do
+		b.BackgroundColor3 = (n == name) and C.accent or C.field
+	end
+end
+for n, b in pairs(tabBtns) do
+	b.MouseButton1Click:Connect(function() showTab(n) end)
+end
+showTab("Fonts")
+
+nameBox:GetPropertyChangedSignal("Text"):Connect(function()
+	rebuild()
+	updatePreview()
+end)
+
+confirmBtn.MouseButton1Click:Connect(function()
+	local text = currentText()
+	if not customText then
+		if not text then
+			status.Text = "Type your name first."
+			return
+		end
+		if not selected and #symbols == 0 then
+			status.Text = "Pick a font or a symbol first."
+			return
+		end
+	end
+	if not rpNameEvent then
+		status.Text = "RP name remote not found yet. Wait a few seconds and try again."
+		return
+	end
+	local final = customText or build(text)
+	pcall(function() rpNameEvent:FireServer("RolePlayName", final) end)
+	status.Text = "Applied: " .. final
+end)
+
+local rainbowOn = false
+rainbowBtn.MouseButton1Click:Connect(function()
+	rainbowOn = not rainbowOn
+	rainbowBtn.Text = rainbowOn and "Rainbow ON" or "Rainbow"
+	rainbowBtn.BackgroundColor3 = rainbowOn and C.accent or C.field
+	if rainbowOn then
+		if not rpColorEvent then
+			status.Text = "Colour remote not found yet. Try again in a few seconds."
+			rainbowOn = false
+			rainbowBtn.Text = "Rainbow"
+			rainbowBtn.BackgroundColor3 = C.field
+			return
+		end
+		status.Text = "Rainbow name ON."
+		task.spawn(function()
+			while rainbowOn and gui.Parent do
+				local h = (os.clock() / 3) % 1
+				pcall(function() rpColorEvent:FireServer("PickingRPNameColor", Color3.fromHSV(h, 1, 1)) end)
+				task.wait(0.25)
+			end
+		end)
+	else
+		status.Text = "Rainbow name OFF."
+	end
+end)
+
+updateSymBar()
+rebuild()
+
+-- embedded button picture (needs an executor with writefile + getcustomasset; falls back to a "K")
+local ICON_B64 = {
+	"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",
+}
+local B64CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+local function b64decode(data)
+	local lookup = {}
+	for i = 1, 64 do lookup[B64CHARS:byte(i)] = i - 1 end
+	local out = {}
+	for i = 1, #data, 4 do
+		local a, b = lookup[data:byte(i)], lookup[data:byte(i + 1)]
+		local c, d = lookup[data:byte(i + 2)], lookup[data:byte(i + 3)]
+		local n = a * 262144 + b * 4096 + (c or 0) * 64 + (d or 0)
+		out[#out + 1] = string.char(math.floor(n / 65536) % 256)
+		if c then out[#out + 1] = string.char(math.floor(n / 256) % 256) end
+		if d then out[#out + 1] = string.char(n % 256) end
+	end
+	return table.concat(out)
+end
+local ICON_ASSET = "rbxassetid://100225738070413"  -- logo + K button picture (works on any executor)
+
+-- circle open / close button (draggable)
+local circle = new("TextButton", {
+	Text = ICON_ASSET and "" or "K", Font = Enum.Font.GothamBold, TextSize = 22, TextColor3 = C.text, BackgroundColor3 = C.bg,
+	Size = UDim2.fromOffset(54, 54), Position = UDim2.new(0, 16, 0.5, -27), AutoButtonColor = false,
+}, gui)
+round(circle, 27)
+if ICON_ASSET then
+	local pic = new("ImageLabel", {
+		Image = ICON_ASSET, BackgroundTransparency = 1, Size = UDim2.new(1, -6, 1, -6), Position = UDim2.fromOffset(3, 3),
+		ScaleType = Enum.ScaleType.Fit, Active = false,
+	}, circle)
+	round(pic, 27)
+end
+rgbStroke(circle, 2.5)
+do
+	local down, startPos, startIn, moved, cancelled
+	circle.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			down, startPos, startIn, moved, cancelled = true, circle.Position, i.Position, false, false
+		end
+	end)
+	UIS.InputChanged:Connect(function(i)
+		if down and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+			local d = i.Position - startIn
+			if d.Magnitude > 6 then if locked then cancelled = true else moved = true end end
+			if moved then
+				circle.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+			end
+		end
+	end)
+	UIS.InputEnded:Connect(function(i)
+		if down and (i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch) then
+			down = false
+			if not moved and not cancelled then main.Visible = not main.Visible end
+		end
+	end)
+end
+
+do
+	local dragging, dragStart, startPos
+	bar.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			if not locked then dragging, dragStart, startPos = true, i.Position, main.Position end
+		end
+	end)
+	UIS.InputChanged:Connect(function(i)
+		if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+			local d = i.Position - dragStart
+			main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+		end
+	end)
+	UIS.InputEnded:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+end
+
+-- RGB animation (outlines + title)
+local conn
+conn = RunService.RenderStepped:Connect(function(dt)
+	if not gui.Parent then
+		conn:Disconnect()
+		return
+	end
+	local h = (os.clock() / 5) % 1
+	local c1, c2 = Color3.fromHSV(h, 1, 1), Color3.fromHSV((h + 0.5) % 1, 1, 0.15)
+	for _, g in ipairs(spinners) do
+		g.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, c1), ColorSequenceKeypoint.new(0.5, c2), ColorSequenceKeypoint.new(1, c1) })
+		g.Rotation = (g.Rotation + dt * 120) % 360
+	end
+	title.TextColor3 = c1
+	credit.TextColor3 = c1
+end)
+
+----------------------------------------------------------------
+-- THEME (top right): Black / White / Clear
+----------------------------------------------------------------
+local THEMES = {
+	Black = {
+		bg2 = Color3.fromRGB(6, 6, 8), bg = Color3.fromRGB(0, 0, 0), panel = Color3.fromRGB(14, 14, 18), field = Color3.fromRGB(26, 26, 32),
+		text = Color3.fromRGB(240, 240, 248), sub = Color3.fromRGB(150, 150, 172), line = Color3.fromRGB(60, 60, 82),
+		accent = Color3.fromRGB(90, 24, 52), good = Color3.fromRGB(200, 30, 60), alpha = 0,
+	},
+	White = {
+		bg2 = Color3.fromRGB(250, 250, 253), bg = Color3.fromRGB(238, 238, 245), panel = Color3.fromRGB(255, 255, 255), field = Color3.fromRGB(226, 226, 236),
+		text = Color3.fromRGB(24, 24, 34), sub = Color3.fromRGB(95, 95, 115), line = Color3.fromRGB(190, 190, 208),
+		accent = Color3.fromRGB(255, 182, 196), good = Color3.fromRGB(255, 120, 140), alpha = 0,
+	},
+	Clear = {
+		bg2 = Color3.fromRGB(6, 6, 8), bg = Color3.fromRGB(0, 0, 0), panel = Color3.fromRGB(14, 14, 18), field = Color3.fromRGB(26, 26, 32),
+		text = Color3.fromRGB(240, 240, 248), sub = Color3.fromRGB(170, 170, 190), line = Color3.fromRGB(60, 60, 82),
+		accent = Color3.fromRGB(90, 24, 52), good = Color3.fromRGB(200, 30, 60), alpha = 0.55,
+	},
+}
+local THEME_KEYS = { "bg2", "bg", "panel", "field", "text", "sub", "line", "accent", "good" }
+local swatchStrokes = {}
+
+local function applyTheme(name)
+	local t = THEMES[name]
+	if not t then return end
+	local list = {}
+	for _, k in ipairs(THEME_KEYS) do table.insert(list, { C[k], t[k] }) end
+	local function map(c)
+		for _, p in ipairs(list) do
+			if c == p[1] then return p[2] end
+		end
+		return nil
+	end
+	local function fix(o)
+		if o.Name == "Swatch" or o:GetAttribute("NoTheme") then return end
+		if o:IsA("GuiObject") then
+			local n = map(o.BackgroundColor3)
+			if n then o.BackgroundColor3 = n end
+		end
+		if o:IsA("TextLabel") or o:IsA("TextButton") or o:IsA("TextBox") then
+			local n = map(o.TextColor3)
+			if n then o.TextColor3 = n end
+		end
+		if o:IsA("TextBox") then
+			local n = map(o.PlaceholderColor3)
+			if n then o.PlaceholderColor3 = n end
+		end
+		if o:IsA("UIStroke") then
+			local n = map(o.Color)
+			if n then o.Color = n end
+		end
+	end
+	for _, d in ipairs(main:GetDescendants()) do fix(d) end
+	fix(main)
+	fix(circle)
+
+	local g = main:FindFirstChildOfClass("UIGradient")
+	if g then g.Color = ColorSequence.new(t.bg2, t.bg) end
+
+	bgAlpha = t.alpha * 0.8
+	main.BackgroundTransparency = t.alpha
+	for _, d in ipairs(main:GetDescendants()) do
+		if d:IsA("GuiObject") and d.Name ~= "Swatch" and not d:GetAttribute("NoTheme") and d.BackgroundTransparency < 0.99 then
+			d.BackgroundTransparency = bgAlpha
+		end
+	end
+	for _, k in ipairs(THEME_KEYS) do C[k] = t[k] end
+
+	for n, st in pairs(swatchStrokes) do
+		st.Color = (n == name) and C.red or Color3.new(1, 1, 1)
+		st.Thickness = (n == name) and 2.5 or 1
+	end
+end
+
+do
+	local SW = {
+		{ "Black", Color3.fromRGB(0, 0, 0), 0 },
+		{ "White", Color3.fromRGB(240, 240, 246), 0 },
+		{ "Clear", Color3.fromRGB(130, 130, 150), 0.55 },
+	}
+	new("TextLabel", {
+		Text = "THEME", Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = C.sub, BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -18 - 3 * 30 - 2, 0.5, 0), Size = UDim2.fromOffset(44, 14),
+		TextXAlignment = Enum.TextXAlignment.Right,
+	}, bar)
+	for k, d in ipairs(SW) do
+		local b = new("TextButton", {
+			Name = "Swatch", Text = "", BackgroundColor3 = d[2], BackgroundTransparency = d[3], AutoButtonColor = false,
+			AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -18 - (3 - k) * 30, 0.5, 0), Size = UDim2.fromOffset(22, 22),
+		}, bar)
+		round(b, 11)
+		swatchStrokes[d[1]] = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1 }, b)
+		b.MouseButton1Click:Connect(function() applyTheme(d[1]) end)
+	end
+end
+-- lock: stops the window and the K button from being moved (everything else keeps working)
+local lockBtn = new("TextButton", {
+	Name = "LockBtn", Text = "🔓 Lock", Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = C.text, BackgroundColor3 = C.field,
+	AutoButtonColor = false, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -162, 0.5, 0), Size = UDim2.fromOffset(72, 24),
+}, bar)
+round(lockBtn, 12)
+lockBtn.MouseButton1Click:Connect(function()
+	locked = not locked
+	lockBtn.Text = locked and "🔒 Unlock" or "🔓 Lock"
+	lockBtn.BackgroundColor3 = locked and C.accent or C.field
+	status.Text = locked and "Locked: the window and the K button can't be moved now." or "Unlocked: you can move them again."
+end)
+
+applyTheme("Black")
+
+----------------------------------------------------------------
+-- LOADING SCREEN + "SCRIPT LOADED" CHAT MESSAGE
+----------------------------------------------------------------
+main.Visible = false
+circle.Visible = false
+
+local loading = new("Frame", {
+	Name = "Loading", Position = UDim2.fromOffset(0, -60), Size = UDim2.new(1, 0, 1, 60),
+	BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 100, Active = true, ClipsDescendants = true,
+}, gui)
+new("UIGradient", { Rotation = 90, Color = ColorSequence.new(C.bg2, C.bg) }, loading)
+
+-- floating particles
+local rng = Random.new()
+local particles = {}
+for i = 1, 22 do
+	local p = new("TextLabel", {
+		Text = ({ "✦", "★", "•", "✧" })[rng:NextInteger(1, 4)], Font = Enum.Font.GothamBold, TextSize = rng:NextInteger(10, 22),
+		TextColor3 = C.red, TextTransparency = rng:NextNumber(0.55, 0.85), BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(24, 24), Position = UDim2.fromScale(rng:NextNumber(), rng:NextNumber()),
+	}, loading)
+	table.insert(particles, { obj = p, speed = rng:NextNumber(0.02, 0.07), drift = rng:NextNumber(-0.01, 0.01) })
+end
+
+local holder = new("Frame", {
+	AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(440, 300), BackgroundTransparency = 1,
+}, loading)
+
+-- logo (your picture, or a "K")
+local logo = new("Frame", {
+	AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.fromOffset(96, 96), BackgroundColor3 = C.bg,
+}, holder)
+round(logo, 48)
+local logoStroke = new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, logo)
+local logoGrad = new("UIGradient", { Color = ColorSequence.new(Color3.new(1, 0, 0)) }, logoStroke)
+if ICON_ASSET then
+	local pic = new("ImageLabel", { Image = ICON_ASSET, BackgroundTransparency = 1, Size = UDim2.new(1, -8, 1, -8), Position = UDim2.fromOffset(4, 4) }, logo)
+	round(pic, 48)
+else
+	new("TextLabel", { Text = "K", Font = Enum.Font.GothamBold, TextSize = 46, TextColor3 = C.red, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, logo)
+end
+
+new("TextLabel", {
+	Text = "W E L C O M E   T O", Font = Enum.Font.GothamMedium, TextSize = 15, TextColor3 = C.sub, BackgroundTransparency = 1,
+	Position = UDim2.fromOffset(0, 108), Size = UDim2.new(1, 0, 0, 20),
+}, holder)
+
+-- title, one letter at a time
+local TITLE = "VÆLOR FONTS"
+local letters = {}
+do
+	local row = new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 134), Size = UDim2.fromOffset(420, 52), BackgroundTransparency = 1 }, holder)
+	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 2) }, row)
+	local chars = {}
+	for _, cp in utf8.codes(TITLE) do table.insert(chars, utf8.char(cp)) end
+	for i, ch in ipairs(chars) do
+		local l = new("TextLabel", {
+			Text = ch, Font = Enum.Font.GothamBold, TextSize = 44, TextColor3 = C.red, TextTransparency = 1, BackgroundTransparency = 1,
+			Size = UDim2.fromOffset(ch == " " and 14 or 30, 52), LayoutOrder = i,
+		}, row)
+		letters[i] = l
+	end
+end
+
+-- progress bar
+local track = new("Frame", {
+	AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 206), Size = UDim2.fromOffset(320, 10), BackgroundColor3 = C.field, BorderSizePixel = 0,
+}, holder)
+round(track, 5)
+local trackStroke = new("UIStroke", { Color = C.line, Thickness = 1 }, track)
+local fill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, track)
+round(fill, 5)
+local fillGrad = new("UIGradient", { Color = ColorSequence.new(C.accent, C.red) }, fill)
+local percent = new("TextLabel", {
+	Text = "0%", Font = Enum.Font.GothamBold, TextSize = 13, TextColor3 = C.text, BackgroundTransparency = 1,
+	Position = UDim2.fromOffset(0, 222), Size = UDim2.new(1, 0, 0, 18),
+}, holder)
+local loadStatus = new("TextLabel", {
+	Text = "Starting...", Font = Enum.Font.Gotham, TextSize = 13, TextColor3 = C.sub, BackgroundTransparency = 1,
+	Position = UDim2.fromOffset(0, 242), Size = UDim2.new(1, 0, 0, 18),
+}, holder)
+new("TextLabel", {
+	Text = "made by Zoro  •   Discord: " .. DISCORD_NAME, Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = C.sub, BackgroundTransparency = 1,
+	Position = UDim2.fromOffset(0, 272), Size = UDim2.new(1, 0, 0, 16),
+}, holder)
+
+-- animation loop (colours, particles)
+local loadConn
+loadConn = RunService.RenderStepped:Connect(function(dt)
+	if not loading.Parent then
+		loadConn:Disconnect()
+		return
+	end
+	local h = (os.clock() / 4) % 1
+	local c1, c2 = Color3.fromHSV(h, 1, 1), Color3.fromHSV((h + 0.5) % 1, 1, 0.2)
+	logoGrad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, c1), ColorSequenceKeypoint.new(0.5, c2), ColorSequenceKeypoint.new(1, c1) })
+	logoGrad.Rotation = (logoGrad.Rotation + dt * 180) % 360
+	for i, l in ipairs(letters) do
+		l.TextColor3 = Color3.fromHSV((h + i * 0.04) % 1, 0.75, 1)
+	end
+	for _, p in ipairs(particles) do
+		local pos = p.obj.Position
+		local y = pos.Y.Scale - p.speed * dt
+		if y < -0.05 then y = 1.05 end
+		p.obj.Position = UDim2.fromScale((pos.X.Scale + p.drift * dt) % 1, y)
+	end
+end)
+
+local function fadeOut(root, t)
+	local info = TweenInfo.new(t, Enum.EasingStyle.Quad)
+	for _, d in ipairs(root:GetDescendants()) do
+		if d:IsA("TextLabel") then
+			TweenService:Create(d, info, { TextTransparency = 1 }):Play()
+		elseif d:IsA("ImageLabel") then
+			TweenService:Create(d, info, { ImageTransparency = 1, BackgroundTransparency = 1 }):Play()
+		elseif d:IsA("Frame") then
+			TweenService:Create(d, info, { BackgroundTransparency = 1 }):Play()
+		elseif d:IsA("UIStroke") then
+			TweenService:Create(d, info, { Transparency = 1 }):Play()
+		end
+	end
+	TweenService:Create(root, info, { BackgroundTransparency = 1 }):Play()
+end
+
+local function announce()
+	local msg = "VÆLOR FONTS SCRIPT LOADED"
+	local sent = false
+	if ANNOUNCE_PUBLIC then
+		pcall(function()
+			if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+				TextChatService:WaitForChild("TextChannels", 5):WaitForChild("RBXGeneral", 5):SendAsync(msg)
+			else
+				ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 5):WaitForChild("SayMessageRequest", 5):FireServer(msg, "All")
+			end
+			sent = true
+		end)
+	end
+	if not sent then
+		-- local-only fallback (only you can see it)
+		local ok = pcall(function()
+			TextChatService.TextChannels.RBXGeneral:DisplaySystemMessage(msg)
+		end)
+		if not ok then
+			pcall(function()
+				game:GetService("StarterGui"):SetCore("ChatMakeSystemMessage", { Text = msg, Color = Color3.fromRGB(255, 70, 90) })
+			end)
+		end
+	end
+end
+
+task.spawn(function()
+	-- letters pop in one by one
+	for i, l in ipairs(letters) do
+		TweenService:Create(l, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { TextTransparency = 0 }):Play()
+		task.wait(0.06)
+	end
+
+	local steps = {
+		{ 0.30, "Loading fonts..." },
+		{ 0.60, "Loading symbols..." },
+		{ 0.85, "Loading emoji..." },
+		{ 1.00, "Almost ready..." },
+	}
+	local shown = 0
+	for _, st in ipairs(steps) do
+		loadStatus.Text = st[2]
+		TweenService:Create(fill, TweenInfo.new(0.5, Enum.EasingStyle.Quad), { Size = UDim2.fromScale(st[1], 1) }):Play()
+		local from, to = shown, math.floor(st[1] * 100)
+		for v = from, to, 2 do
+			percent.Text = v .. "%"
+			task.wait(0.5 / math.max(1, (to - from) / 2))
+		end
+		shown = to
+		percent.Text = to .. "%"
+	end
+	loadStatus.Text = "Welcome!"
+	task.wait(0.35)
+	fadeOut(loading, 0.5)
+	task.wait(0.55)
+	loading:Destroy()
+	main.Visible = true
+	circle.Visible = true
+	announce()
+end)
